@@ -4,6 +4,7 @@ import axios from "axios";
 
 const POSTS_URL="https://jsonplaceholder.typicode.com/posts"
 
+
 const initialState = {
     posts:[],
     status:"idle",
@@ -11,11 +12,16 @@ const initialState = {
 }
 
 export const fetchPosts = createAsyncThunk('posts/fetchPosts', async () => {
-    console.log("ilyas");
+
     const response = await axios.get(POSTS_URL)
     return response.data
 })
 
+
+export const addNewPost = createAsyncThunk('posts/addNewPost', async (initialPost) => {
+    const response = await axios.post(POSTS_URL, initialPost)
+    return response.data
+})
 
 
 const postsSlice = createSlice({
@@ -60,11 +66,11 @@ const postsSlice = createSlice({
         builder
             .addCase(fetchPosts.pending, (state, action) => {
                 state.status = 'loading'
-                console.log(1);
+               
             })
             .addCase(fetchPosts.fulfilled, (state, action) => {
                 state.status = 'succeeded'
-                console.log(2);
+           
                 // Adding date and reactions
                 let min = 1;
                 const loadedPosts = action.payload.map(post => {
@@ -85,6 +91,31 @@ const postsSlice = createSlice({
             .addCase(fetchPosts.rejected, (state, action) => {
                 state.status = 'failed'
                 state.error = action.error.message
+            })
+            .addCase(addNewPost.fulfilled, (state, action) => {
+                // Fix for API post IDs:
+                // Creating sortedPosts & assigning the id 
+                // would be not be needed if the fake API 
+                // returned accurate new post IDs
+                const sortedPosts = state.posts.sort((a, b) => {
+                    if (a.id > b.id) return 1
+                    if (a.id < b.id) return -1
+                    return 0
+                })
+                action.payload.id = sortedPosts[sortedPosts.length - 1].id + 1;
+                // End fix for fake API post IDs 
+
+                action.payload.userId = Number(action.payload.userId)
+                action.payload.date = new Date().toISOString();
+                action.payload.reactions = {
+                    thumbsUp: 0,
+                    wow: 0,
+                    heart: 0,
+                    rocket: 0,
+                    coffee: 0
+                }
+                console.log(action.payload)
+                state.posts.push(action.payload)
             })
     }
 })
